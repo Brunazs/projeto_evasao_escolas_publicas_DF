@@ -12,7 +12,7 @@ import os
 import sys
 
 PROJECT_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..")
+    os.path.join(os.path.dirname(__file__), "..", "..")
 )
 
 if PROJECT_DIR not in sys.path:
