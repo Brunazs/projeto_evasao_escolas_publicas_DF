@@ -5,6 +5,7 @@ import requests
 import os
 import json
 from datetime import datetime
+from airflow.models.taskinstance import TaskInstance
 
 # Resolve o caminho do projeto pelo próprio arquivo
 # extractors.py está em: projeto/scripts/extractors.py
@@ -23,19 +24,29 @@ SEEDF_URL = (
     "/resource/c196e905-11d2-4333-9a5a-e64d6a89d2bb/download/situacao_aluno.csv"
 )
 
+
 def extract_seedf(**context):
+    ti: TaskInstance = context["ti"]
+
     _ensure_dirs()
+
     file_path = os.path.join(RAW_DIR, "situacao_aluno.csv")
 
-    print(f"📥 Baixando dados da SEEDF...")
+    print("📥 Baixando dados da SEEDF...")
+
     response = requests.get(SEEDF_URL, timeout=120)
     response.raise_for_status()
 
     with open(file_path, "wb") as f:
         f.write(response.content)
 
-    print(f"✅ SEEDF salvo: {file_path} ({os.path.getsize(file_path)/1024:.1f} KB)")
-    context["ti"].xcom_push(key="seedf_path", value=file_path)
+    print(f"✅ SEEDF salvo: {file_path}")
+
+    ti.xcom_push(
+        key="seedf_path",
+        value=file_path
+    )
+
     return file_path
 
 
@@ -47,6 +58,7 @@ HF_URLS = [
 ]
 
 def extract_huggingface(state: str = "DF", max_records: int = 100_000, **context):
+    ti:TaskInstance=context["ti"]
     _ensure_dirs()
     df = None
 
@@ -65,7 +77,7 @@ def extract_huggingface(state: str = "DF", max_records: int = 100_000, **context
 
     if df is None:
         print("⚠️  Hugging Face indisponível. Pipeline continua com dados da SEEDF.")
-        context["ti"].xcom_push(key="hf_path", value=None)
+        ti.xcom_push(key="hf_path", value=None)
         return None
 
     uf_col = next((c for c in df.columns if c.lower() in ["uf", "sg_uf", "estado"]), None)
@@ -91,7 +103,7 @@ def extract_huggingface(state: str = "DF", max_records: int = 100_000, **context
         json.dump(meta, f, ensure_ascii=False, indent=2)
 
     print(f"✅ Censo salvo: {file_path}")
-    context["ti"].xcom_push(key="hf_path", value=file_path)
+    ti.xcom_push(key="hf_path", value=file_path)
     return file_path
 
 
@@ -131,6 +143,7 @@ ESCOLAS_CONECTADAS_DATA = {
 }
 
 def extract_policy_data(**context):
+    ti:TaskInstance=context["ti"]
     _ensure_dirs()
 
     print("💰 Extraindo dados do Pé-de-Meia...")
@@ -221,5 +234,5 @@ def extract_policy_data(**context):
         "escolas_conectadas_evolucao.csv", "escolas_conectadas_metas.csv",
         "escolas_conectadas_impacto.json",
     ]
-    context["ti"].xcom_push(key="policy_files", value=[os.path.join(RAW_DIR, f) for f in files])
+    ti.xcom_push(key="policy_files", value=[os.path.join(RAW_DIR, f) for f in files])
     return files

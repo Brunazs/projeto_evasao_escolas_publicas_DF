@@ -4,12 +4,8 @@ import sys
 import os
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.standard.operators.bash import BashOperator
-
-
-import os
-import sys
 
 PROJECT_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
